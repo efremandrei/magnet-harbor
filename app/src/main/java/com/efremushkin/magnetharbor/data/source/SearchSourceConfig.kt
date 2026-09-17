@@ -6,6 +6,7 @@ import java.util.UUID
 enum class SourceKind(val label: String) {
     TORZNAB("Torznab / Jackett"),
     PROWLARR("Prowlarr API"),
+    API_BAY("The Pirate Bay public API"),
 }
 
 data class SearchSourceConfig(
