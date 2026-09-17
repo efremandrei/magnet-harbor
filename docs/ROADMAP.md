@@ -9,17 +9,16 @@
 - [x] Magnet open/copy/share actions
 - [x] Deterministic demo sources and unit tests
 
-## 0.2 — first live integration
+## 0.2 — live-source search
 
-- [ ] Add one documented legal/public-domain source
-- [ ] Add timeouts, retries, and parser fixtures
-- [ ] Add source enable/disable persistence
-- [ ] Add paging and pull-to-refresh
-- [ ] Add instrumented Room migration tests
+- [x] Add Torznab/Jackett and Prowlarr live source adapters
+- [x] Add request timeouts and connection testing
+- [x] Add source enable/disable persistence and diagnostics
+- [x] Add advanced result filters and improved multi-source merging
+- [ ] Add parser fixtures and paging controls
 
-## 0.3 — self-hosted integration
+## 0.3 — production readiness
 
-- [ ] Optional Torznab source for a user-controlled Prowlarr or Jackett server
 - [ ] Encrypted local credential storage
 - [ ] Connection test and redacted diagnostic export
 - [ ] Certificate and cleartext-traffic validation
