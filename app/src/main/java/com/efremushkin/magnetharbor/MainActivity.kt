@@ -28,7 +28,6 @@ class MainActivity : ComponentActivity() {
                 factory = MagnetHarborViewModel.Factory(
                     repository = container.torrentRepository,
                     settingsRepository = container.settingsRepository,
-                    enabledSourceIds = container.sourceIds,
                 ),
             )
             val settings by viewModel.settings.collectAsStateWithLifecycle()
