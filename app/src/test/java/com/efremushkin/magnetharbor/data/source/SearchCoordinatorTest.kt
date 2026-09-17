@@ -35,8 +35,8 @@ class SearchCoordinatorTest {
 
     @Test
     fun `duplicates use the copy with the highest seeder count`() = runTest {
-        val low = result("Same item", HASH_ONE, seeders = 2)
-        val high = result("Same item mirror", HASH_ONE.uppercase(), seeders = 20)
+        val low = result("Same item", HASH_ONE, seeders = 2, source = "low source")
+        val high = result("Same item mirror", HASH_ONE.uppercase(), seeders = 20, source = "high source")
         val coordinator = SearchCoordinator(
             listOf(
                 FakeSource("one", listOf(low)),
@@ -48,12 +48,13 @@ class SearchCoordinatorTest {
 
         assertEquals(1, batch.results.size)
         assertEquals(20, batch.results.single().seeders)
+        assertEquals(setOf("low source", "high source"), batch.results.single().sourceNames)
     }
 
-    private fun result(title: String, hash: String, seeders: Int = 1) = TorrentResult(
+    private fun result(title: String, hash: String, seeders: Int = 1, source: String = "test") = TorrentResult(
         title = title,
         magnetUri = "magnet:?xt=urn:btih:$hash",
-        source = "test",
+        source = source,
         sizeBytes = 1_024,
         seeders = seeders,
         leechers = 0,
