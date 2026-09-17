@@ -57,6 +57,7 @@ import com.efremushkin.magnetharbor.data.model.TorrentResult
 import com.efremushkin.magnetharbor.data.model.asReadableSize
 import com.efremushkin.magnetharbor.data.settings.AppSettings
 import com.efremushkin.magnetharbor.data.source.SearchSourceConfig
+import com.efremushkin.magnetharbor.data.source.SourceCatalog
 import com.efremushkin.magnetharbor.data.source.SourceHealth
 import com.efremushkin.magnetharbor.data.source.SourceKind
 import java.text.DateFormat
@@ -137,9 +138,11 @@ private fun SortSelector(modifier: Modifier, selected: SearchSort, onSelected: (
 @Composable
 private fun SourcesScreen(modifier: Modifier, sources: List<SearchSourceConfig>, health: Map<String, SourceHealth>, onSave: (SearchSourceConfig) -> Unit, onEnabled: (String, Boolean) -> Unit, onTest: (SearchSourceConfig) -> Unit, onDelete: (String) -> Unit) {
     var adding by remember { mutableStateOf(false) }
+    var showCatalog by remember { mutableStateOf(false) }
     Column(modifier.fillMaxSize().padding(16.dp)) {
-        Text("Live sources", style = MaterialTheme.typography.titleLarge); Text("Add your own Torznab/Jackett endpoint or Prowlarr server. Keys stay on this device and are only sent to that source.", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(8.dp)); Button(onClick = { adding = true }) { Text("Add source") }
+        Text("Live sources", style = MaterialTheme.typography.titleLarge); Text("Add your own Torznab/Jackett endpoint or Prowlarr server. Keys stay on this device and are only sent to that source.", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button(onClick = { adding = true }) { Text("Add source") }; OutlinedButton(onClick = { showCatalog = !showCatalog }) { Text(if (showCatalog) "Hide catalog" else "Source catalog") } }
         if (adding) SourceEditor({ onSave(it); adding = false }, { adding = false })
+        if (showCatalog) Card(Modifier.fillMaxWidth().padding(vertical = 8.dp)) { Column(Modifier.padding(12.dp)) { Text("Reference source catalog", style = MaterialTheme.typography.titleMedium); Text("These names come from the supplied screenshots. Selectors are labels only; connect the corresponding indexers through your own Jackett/Prowlarr/Torznab server.", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(6.dp)); Text(SourceCatalog.entries.joinToString(" • ") { it.name }, style = MaterialTheme.typography.bodySmall) } }
         if (sources.isEmpty()) Text("No sources configured.", Modifier.padding(vertical = 24.dp))
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { items(sources, key = { it.id }) { source -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(source.name, style = MaterialTheme.typography.titleMedium); Text(source.kind.label, style = MaterialTheme.typography.bodySmall) }; Switch(source.enabled, { onEnabled(source.id, it) }) }
