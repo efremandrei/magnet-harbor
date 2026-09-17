@@ -17,7 +17,7 @@ object SourceCatalog {
         "0magnet", "1337x", "AcgRip", "AniLibria", "Anime-Time", "AnimeTosho",
         "AniRena", "Arab-Torrents", "AudioBookBay", "Bangumi", "BitRu", "BitSearch",
         "BlueRoms", "BT4G", "BTDigg", "BTDirectory", "BTSOW", "CloudTorrents",
-        "DonTorrent", "EpubLibre", "EZTV", "ExtraTorrent", "FitGirlRepacK",
+        "DonTorrent", "EpubLibre", "EZTV", "ExtraTorrent", "FitGirlRepack",
         "GamesTorrents", "Internet Archive", "ISOHUNT", "Il Corsaro Nero", "KAT",
         "Libgen", "LimeTorrents", "LinuxTracker", "MagnetDL", "MikanAni", "MegaPeer",
         "MoviesDVDR", "NoNameClub", "Nyaa", "OxTorrent", "PC-Torrents", "Pirateiro",
