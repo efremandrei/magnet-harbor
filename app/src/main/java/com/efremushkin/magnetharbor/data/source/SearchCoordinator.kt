@@ -50,7 +50,12 @@ class SearchCoordinator(private val sources: List<TorrentSource>) {
         }
         .values
         .map { duplicates ->
-            duplicates.maxByOrNull { it.seeders ?: -1 } ?: duplicates.first()
+            val best = duplicates.maxByOrNull { it.seeders ?: -1 } ?: duplicates.first()
+            best.copy(
+                seeders = duplicates.mapNotNull { it.seeders }.maxOrNull() ?: best.seeders,
+                leechers = duplicates.mapNotNull { it.leechers }.maxOrNull() ?: best.leechers,
+                sourceNames = duplicates.flatMap { it.sourceNames + it.source }.toSet(),
+            )
         }
 
     private data class SourceOutcome(
