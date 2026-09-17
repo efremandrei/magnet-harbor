@@ -55,7 +55,7 @@ Use the **Sources** tab in the application. Add either:
 - **Torznab / Jackett**: a full Torznab endpoint or a server URL. A bare server URL is completed with `/api`.
 - **Prowlarr API**: the Prowlarr server URL and API key. Magnet Harbor uses Prowlarr's `/api/v1/search` endpoint.
 
-Use **Test** before enabling a source. Your credentials are stored in the app's private DataStore and are only sent to the source you configured. Do not include keys in commits or screenshots.
+Use **Test** before enabling a source. API keys are encrypted locally with the Android Keystore and are only sent to the source you configured. Do not include keys in commits or screenshots.
 
 ## Responsible use
 
