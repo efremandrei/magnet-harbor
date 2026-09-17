@@ -11,6 +11,8 @@ import com.efremushkin.magnetharbor.data.repository.TorrentRepository
 import com.efremushkin.magnetharbor.data.settings.AppSettings
 import com.efremushkin.magnetharbor.data.settings.SettingsRepository
 import com.efremushkin.magnetharbor.data.source.SourceFailure
+import com.efremushkin.magnetharbor.data.source.SearchSourceConfig
+import com.efremushkin.magnetharbor.data.source.SourceHealth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,13 +27,15 @@ data class SearchUiState(
     val sort: SearchSort = SearchSort.SEEDERS,
     val category: TorrentCategory = TorrentCategory.ALL,
     val failures: List<SourceFailure> = emptyList(),
+    val minSeeders: Int? = null,
+    val maxSizeGiB: Int? = null,
+    val maxAgeDays: Int? = null,
     val message: String? = null,
 )
 
 class MagnetHarborViewModel(
     private val repository: TorrentRepository,
     private val settingsRepository: SettingsRepository,
-    private val enabledSourceIds: Set<String>,
 ) : ViewModel() {
     private val _searchState = MutableStateFlow(SearchUiState())
     val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
@@ -51,6 +55,13 @@ class MagnetHarborViewModel(
         SharingStarted.WhileSubscribed(5_000),
         AppSettings(),
     )
+    val sources: StateFlow<List<SearchSourceConfig>> = settingsRepository.sources.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        emptyList(),
+    )
+    private val _sourceHealth = MutableStateFlow<Map<String, SourceHealth>>(emptyMap())
+    val sourceHealth: StateFlow<Map<String, SourceHealth>> = _sourceHealth.asStateFlow()
 
     private var rawResults: List<TorrentResult> = emptyList()
 
@@ -73,7 +84,7 @@ class MagnetHarborViewModel(
 
         viewModelScope.launch {
             _searchState.value = _searchState.value.copy(isLoading = true, failures = emptyList(), message = null)
-            runCatching { repository.search(query, enabledSourceIds) }
+            runCatching { repository.search(query, sources.value) }
                 .onSuccess { batch ->
                     rawResults = batch.results
                     _searchState.value = _searchState.value.copy(
@@ -101,6 +112,34 @@ class MagnetHarborViewModel(
         refreshVisibleResults(settings.value)
     }
 
+    fun setFilters(minSeeders: String, maxSizeGiB: String, maxAgeDays: String) {
+        _searchState.value = _searchState.value.copy(
+            minSeeders = minSeeders.toIntOrNull()?.coerceAtLeast(0),
+            maxSizeGiB = maxSizeGiB.toIntOrNull()?.coerceAtLeast(1),
+            maxAgeDays = maxAgeDays.toIntOrNull()?.coerceAtLeast(1),
+        )
+        refreshVisibleResults(settings.value)
+    }
+
+    fun saveSource(config: SearchSourceConfig) {
+        viewModelScope.launch { settingsRepository.saveSource(config) }
+    }
+
+    fun setSourceEnabled(id: String, enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setSourceEnabled(id, enabled) }
+    }
+
+    fun deleteSource(id: String) {
+        viewModelScope.launch { settingsRepository.deleteSource(id) }
+    }
+
+    fun testSource(config: SearchSourceConfig) {
+        viewModelScope.launch {
+            _sourceHealth.value = _sourceHealth.value + (config.id to SourceHealth(config.id, config.name, false, null, "Testing…"))
+            _sourceHealth.value = _sourceHealth.value + (config.id to repository.testSource(config))
+        }
+    }
+
     fun toggleFavorite(result: TorrentResult) {
         viewModelScope.launch { repository.toggleFavorite(result) }
     }
@@ -123,6 +162,12 @@ class MagnetHarborViewModel(
             .asSequence()
             .filter { current.category == TorrentCategory.ALL || it.category == current.category }
             .filter { !currentSettings.hideZeroSeeders || (it.seeders ?: 0) > 0 }
+            .filter { current.minSeeders == null || (it.seeders ?: 0) >= current.minSeeders }
+            .filter { current.maxSizeGiB == null || (it.sizeBytes ?: Long.MAX_VALUE) <= current.maxSizeGiB * 1024L * 1024L * 1024L }
+            .filter {
+                current.maxAgeDays == null || it.publishedAtEpochMillis == null ||
+                    it.publishedAtEpochMillis >= System.currentTimeMillis() - current.maxAgeDays * 86_400_000L
+            }
             .toList()
 
         val sorted = when (current.sort) {
@@ -138,12 +183,11 @@ class MagnetHarborViewModel(
     class Factory(
         private val repository: TorrentRepository,
         private val settingsRepository: SettingsRepository,
-        private val enabledSourceIds: Set<String>,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(MagnetHarborViewModel::class.java))
-            return MagnetHarborViewModel(repository, settingsRepository, enabledSourceIds) as T
+            return MagnetHarborViewModel(repository, settingsRepository) as T
         }
     }
 }
