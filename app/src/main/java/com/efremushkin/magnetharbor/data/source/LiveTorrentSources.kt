@@ -23,6 +23,7 @@ object TorrentSourceFactory {
     fun create(config: SearchSourceConfig): TestableTorrentSource = when (config.kind) {
         SourceKind.TORZNAB -> TorznabTorrentSource(config)
         SourceKind.PROWLARR -> ProwlarrTorrentSource(config)
+        SourceKind.API_BAY -> ApiBayTorrentSource(config)
     }
 }
 
@@ -126,6 +127,35 @@ private class TorznabTorrentSource(config: SearchSourceConfig) : HttpTorrentSour
             event = parser.next()
         }
         return results
+    }
+}
+
+/** Public API-compatible search endpoint for The Pirate Bay index. */
+private class ApiBayTorrentSource(config: SearchSourceConfig) : HttpTorrentSource(config) {
+    override suspend fun search(query: String, page: Int): List<TorrentResult> {
+        val response = request("https://apibay.org/q.php?q=${encoded(query)}")
+        val array = JSONArray(response)
+        return buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val hash = item.optString("info_hash").trim()
+                if (hash.isBlank()) continue
+                add(TorrentResult(
+                    title = item.optString("name").ifBlank { "Untitled result" },
+                    magnetUri = "magnet:?xt=urn:btih:$hash&dn=${encoded(item.optString("name"))}",
+                    source = displayName,
+                    sizeBytes = item.optLong("size").takeIf { it > 0 },
+                    seeders = item.optInt("seeders").takeIf { it >= 0 },
+                    leechers = item.optInt("leechers").takeIf { it >= 0 },
+                    category = TorrentCategory.fromSourceValue(item.optString("category")),
+                    publishedAtEpochMillis = item.optLong("added").takeIf { it > 0 }?.times(1000),
+                ))
+            }
+        }
+    }
+
+    override suspend fun performHealthCheck() {
+        request("https://apibay.org/q.php?q=magnet-harbor-health")
     }
 }
 
