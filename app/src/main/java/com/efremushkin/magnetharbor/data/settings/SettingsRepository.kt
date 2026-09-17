@@ -1,6 +1,8 @@
 package com.efremushkin.magnetharbor.data.settings
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -20,6 +22,16 @@ data class AppSettings(
 )
 
 class SettingsRepository(private val context: Context) {
+    private val credentials by lazy {
+        EncryptedSharedPreferences.create(
+            context,
+            "source_credentials",
+            MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }
+
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { preferences ->
         AppSettings(
             hideZeroSeeders = preferences[HIDE_ZERO_SEEDERS] ?: true,
@@ -43,7 +55,9 @@ class SettingsRepository(private val context: Context) {
         context.settingsDataStore.edit { preferences ->
             val current = decodeSources(preferences[SOURCES_JSON]).toMutableList()
             val index = current.indexOfFirst { it.id == config.id }
-            if (index >= 0) current[index] = config else current += config
+            if (config.apiKey.isNotBlank()) credentials.edit().putString(config.id, config.apiKey).apply()
+            val persisted = config.copy(apiKey = "")
+            if (index >= 0) current[index] = persisted else current += persisted
             preferences[SOURCES_JSON] = encodeSources(current)
         }
     }
@@ -59,6 +73,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun deleteSource(id: String) {
         context.settingsDataStore.edit { preferences ->
             preferences[SOURCES_JSON] = encodeSources(decodeSources(preferences[SOURCES_JSON]).filterNot { it.id == id })
+            credentials.edit().remove(id).apply()
         }
     }
 
@@ -82,7 +97,7 @@ class SettingsRepository(private val context: Context) {
                             name = name,
                             kind = runCatching { SourceKind.valueOf(item.optString("kind")) }.getOrDefault(SourceKind.TORZNAB),
                             endpoint = endpoint,
-                            apiKey = item.optString("apiKey"),
+                        apiKey = credentials.getString(item.optString("id"), "").orEmpty(),
                             enabled = item.optBoolean("enabled", true),
                         ),
                     )
@@ -98,7 +113,6 @@ class SettingsRepository(private val context: Context) {
                 put("name", source.name)
                 put("kind", source.kind.name)
                 put("endpoint", source.endpoint)
-                put("apiKey", source.apiKey)
                 put("enabled", source.enabled)
             })
         }
