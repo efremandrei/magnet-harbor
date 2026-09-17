@@ -6,7 +6,9 @@ enum class TorrentCategory(val label: String) {
     VIDEO("Video"),
     BOOKS("Books"),
     SOFTWARE("Software"),
-    OTHER("Other"),
+    OTHER("Other");
+
+    companion object
 }
 
 enum class SearchSort(val label: String) {
@@ -26,6 +28,8 @@ data class TorrentResult(
     val leechers: Int?,
     val category: TorrentCategory,
     val publishedAtEpochMillis: Long? = null,
+    /** All providers that supplied this content after info-hash merging. */
+    val sourceNames: Set<String> = setOf(source),
 ) {
     val infoHash: String?
         get() = INFO_HASH.find(magnetUri)?.groupValues?.getOrNull(1)?.lowercase()
@@ -37,6 +41,17 @@ data class TorrentResult(
 
     companion object {
         private val INFO_HASH = Regex("(?:[?&])xt=urn:btih:([^&]+)", RegexOption.IGNORE_CASE)
+    }
+}
+
+fun TorrentCategory.Companion.fromSourceValue(value: String?): TorrentCategory {
+    val normalised = value.orEmpty().lowercase()
+    return when {
+        normalised.contains("audio") || normalised.contains("music") -> TorrentCategory.AUDIO
+        normalised.contains("movie") || normalised.contains("tv") || normalised.contains("video") -> TorrentCategory.VIDEO
+        normalised.contains("book") || normalised.contains("ebook") || normalised.contains("magazine") -> TorrentCategory.BOOKS
+        normalised.contains("app") || normalised.contains("game") || normalised.contains("software") || normalised.contains("linux") -> TorrentCategory.SOFTWARE
+        else -> TorrentCategory.OTHER
     }
 }
 
