@@ -3,6 +3,7 @@ package com.efremushkin.magnetharbor.data.source
 import android.util.Xml
 import com.efremushkin.magnetharbor.data.model.TorrentCategory
 import com.efremushkin.magnetharbor.data.model.TorrentResult
+import com.efremushkin.magnetharbor.data.model.fromSourceValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
