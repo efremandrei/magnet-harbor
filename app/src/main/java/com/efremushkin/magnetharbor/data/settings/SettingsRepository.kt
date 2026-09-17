@@ -40,7 +40,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     val sources: Flow<List<SearchSourceConfig>> = context.settingsDataStore.data.map { preferences ->
-        decodeSources(preferences[SOURCES_JSON])
+        decodeSources(preferences[SOURCES_JSON]).ifEmpty { listOf(defaultApiBaySource()) }
     }
 
     suspend fun setHideZeroSeeders(enabled: Boolean) {
@@ -76,6 +76,14 @@ class SettingsRepository(private val context: Context) {
             credentials.edit().remove(id).apply()
         }
     }
+
+    private fun defaultApiBaySource() = SearchSourceConfig(
+        id = "builtin-api-bay",
+        name = "The Pirate Bay",
+        kind = SourceKind.API_BAY,
+        endpoint = "https://apibay.org",
+        enabled = true,
+    )
 
     private companion object {
         val HIDE_ZERO_SEEDERS = booleanPreferencesKey("hide_zero_seeders")
