@@ -2,14 +2,15 @@
 
 Magnet Harbor is a privacy-friendly Android torrent metasearch client scaffold. It searches enabled providers concurrently, normalizes their results, and hands magnet links to a torrent client installed by the user. It does **not** download or stream torrent content itself.
 
-This first development build uses deterministic demonstration providers. The complete search, filter, sort, favorite, history, voice-search, copy/share, and external-client workflows can therefore be developed and tested without depending on a third-party index.
+Magnet Harbor searches only the live sources that you configure. It ships with no preconfigured trackers, credentials, or hardcoded site scrapers.
 
 ## Current features
 
 - Kotlin and Jetpack Compose Material 3 UI
 - Concurrent, failure-isolated multi-source search
-- Result normalization and info-hash deduplication
-- Category filters and five sort modes
+- Torznab/Jackett and Prowlarr API adapters with connection testing
+- Persistent source manager with enable/disable controls and source health diagnostics
+- Result normalization, multi-source info-hash deduplication, category and advanced filters
 - Room-backed favorites and search history
 - DataStore-backed zero-seeder and dark-theme preferences
 - Android voice search
@@ -47,23 +48,14 @@ app/build/outputs/apk/debug/app-debug.apk
 
 On Windows PowerShell, run `./gradlew.bat testDebugUnitTest assembleDebug`.
 
-## Adding a real source
+## Adding a live source
 
-Implement `TorrentSource` and register it in `AppContainer`. Prefer documented JSON/XML APIs or a user-controlled Torznab endpoint over HTML scraping. Keep provider-specific parsing inside its adapter so one changed source cannot break the application.
+Use the **Sources** tab in the application. Add either:
 
-```kotlin
-class ExampleSource : TorrentSource {
-    override val id = "example"
-    override val displayName = "Example"
+- **Torznab / Jackett**: a full Torznab endpoint or a server URL. A bare server URL is completed with `/api`.
+- **Prowlarr API**: the Prowlarr server URL and API key. Magnet Harbor uses Prowlarr's `/api/v1/search` endpoint.
 
-    override suspend fun search(query: String, page: Int): List<TorrentResult> {
-        // Call a documented endpoint, parse it, and return normalized results.
-        TODO()
-    }
-}
-```
-
-Do not commit API keys. Store user-supplied endpoints and credentials locally, and add encrypted storage before introducing secrets.
+Use **Test** before enabling a source. Your credentials are stored in the app's private DataStore and are only sent to the source you configured. Do not include keys in commits or screenshots.
 
 ## Responsible use
 
