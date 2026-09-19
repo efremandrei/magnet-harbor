@@ -26,6 +26,7 @@ object TorrentSourceFactory {
         SourceKind.API_BAY -> ApiBayTorrentSource(config)
         SourceKind.TORRENT_CSV -> TorrentCsvSource(config)
         SourceKind.YTS_API -> YtsApiSource(config)
+        SourceKind.ONE_THREE_THREE_SEVEN_X -> OneThreeThreeSevenXSource(config)
     }
 }
 
@@ -159,6 +160,48 @@ private class ApiBayTorrentSource(config: SearchSourceConfig) : HttpTorrentSourc
     override suspend fun performHealthCheck() {
         request("https://apibay.org/q.php?q=magnet-harbor-health")
     }
+}
+
+/** 1337xx HTML search provider. The site may reject automated requests. */
+private class OneThreeThreeSevenXSource(config: SearchSourceConfig) : HttpTorrentSource(config) {
+    override suspend fun search(query: String, page: Int): List<TorrentResult> {
+        val root = config.endpoint.trim().removeSuffix("/")
+        require(root.startsWith("https://") || root.startsWith("http://")) { "Endpoint must start with http:// or https://" }
+        val searchUrl = "$root/search/${encoded(query)}/${page.coerceAtLeast(1)}/"
+        val html = request(searchUrl)
+        val rows = ROW.findAll(html).toList().take(50)
+        return buildList {
+            for (row in rows) {
+                val detailsUrl = row.groupValues[1].let { if (it.startsWith("http")) it else root + it }
+                val title = row.groupValues[2].htmlText().trim()
+                if (title.isBlank()) continue
+                val magnet = runCatching { MAGNET.find(request(detailsUrl))?.groupValues?.get(1) }.getOrNull()
+                    ?.replace("&amp;", "&") ?: continue
+                add(TorrentResult(
+                    title = title,
+                    magnetUri = magnet,
+                    source = displayName,
+                    sizeBytes = parseSize(row.groupValues[3]),
+                    seeders = row.groupValues[4].trim().toIntOrNull(),
+                    leechers = row.groupValues[5].trim().toIntOrNull(),
+                    category = TorrentCategory.fromSourceValue(row.groupValues[6]),
+                ))
+            }
+        }
+    }
+    override suspend fun performHealthCheck() { request(config.endpoint.trim().removeSuffix("/")) }
+
+    private companion object {
+        val ROW = Regex("""<tr[^>]*>\\s*<td[^>]*class=["']name["'][^>]*>.*?<a[^>]+href=["']([^"']+)["'][^>]*>[^<]*</a>.*?<a[^>]+href=["'][^"']+["'][^>]*>(.*?)</a>.*?</td>.*?<td[^>]*class=["']size["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']seeds["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']leeches["'][^>]*>(.*?)</td>.*?<a[^>]+href=["']/sub/([^/"']+)""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val MAGNET = Regex("""href=["'](magnet:\\?[^"']+)["']""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    }
+}
+
+private fun String.htmlText(): String = replace(Regex("<[^>]+>"), "").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+private fun parseSize(value: String): Long? = Regex("""([0-9]+(?:\\.[0-9]+)?)\\s*(KB|MB|GB|TB)""", RegexOption.IGNORE_CASE).find(value)?.let {
+    val number = it.groupValues[1].toDoubleOrNull() ?: return@let null
+    val multiplier = when (it.groupValues[2].uppercase()) { "KB" -> 1L shl 10; "MB" -> 1L shl 20; "GB" -> 1L shl 30; "TB" -> 1L shl 40; else -> 1L }
+    (number * multiplier).toLong()
 }
 
 /** TorrentCSV's public JSON API. */
