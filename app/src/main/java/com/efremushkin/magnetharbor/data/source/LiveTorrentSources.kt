@@ -24,6 +24,8 @@ object TorrentSourceFactory {
         SourceKind.TORZNAB -> TorznabTorrentSource(config)
         SourceKind.PROWLARR -> ProwlarrTorrentSource(config)
         SourceKind.API_BAY -> ApiBayTorrentSource(config)
+        SourceKind.TORRENT_CSV -> TorrentCsvSource(config)
+        SourceKind.YTS_API -> YtsApiSource(config)
     }
 }
 
@@ -157,6 +159,53 @@ private class ApiBayTorrentSource(config: SearchSourceConfig) : HttpTorrentSourc
     override suspend fun performHealthCheck() {
         request("https://apibay.org/q.php?q=magnet-harbor-health")
     }
+}
+
+/** TorrentCSV's public JSON API. */
+private class TorrentCsvSource(config: SearchSourceConfig) : HttpTorrentSource(config) {
+    override suspend fun search(query: String, page: Int): List<TorrentResult> {
+        val response = request("https://torrents-csv.com/service/search?q=${encoded(query)}&size=100&page=${page.coerceAtLeast(1)}")
+        val torrents = JSONObject(response).optJSONArray("torrents") ?: return emptyList()
+        return buildList {
+            for (index in 0 until torrents.length()) {
+                val item = torrents.optJSONObject(index) ?: continue
+                val hash = item.optString("infohash").trim()
+                val title = item.optString("name").trim()
+                if (hash.isBlank() || title.isBlank()) continue
+                add(TorrentResult(title, "magnet:?xt=urn:btih:$hash&dn=${encoded(title)}", displayName,
+                    item.optLong("size_bytes").takeIf { it > 0 }, item.optInt("seeders").takeIf { it >= 0 },
+                    item.optInt("leechers").takeIf { it >= 0 }, TorrentCategory.fromSourceValue(title),
+                    item.optLong("created_unix").takeIf { it > 0 }?.times(1000)))
+            }
+        }
+    }
+    override suspend fun performHealthCheck() { request("https://torrents-csv.com/service/search?q=health&size=1&page=1") }
+}
+
+/** YTS's public movie API, with magnets built from returned info hashes. */
+private class YtsApiSource(config: SearchSourceConfig) : HttpTorrentSource(config) {
+    override suspend fun search(query: String, page: Int): List<TorrentResult> {
+        val response = request("https://movies-api.accel.li/api/v2/list_movies.json?query_term=${encoded(query)}&limit=50&page=${page.coerceAtLeast(1)}")
+        val movies = JSONObject(response).optJSONObject("data")?.optJSONArray("movies") ?: return emptyList()
+        return buildList {
+            for (i in 0 until movies.length()) {
+                val movie = movies.optJSONObject(i) ?: continue
+                val title = movie.optString("title_long").ifBlank { movie.optString("title") }
+                val torrents = movie.optJSONArray("torrents") ?: continue
+                for (j in 0 until torrents.length()) {
+                    val torrent = torrents.optJSONObject(j) ?: continue
+                    val hash = torrent.optString("hash").trim()
+                    if (title.isBlank() || hash.isBlank()) continue
+                    val label = listOf(torrent.optString("quality"), torrent.optString("type"), torrent.optString("video_codec")).filter { it.isNotBlank() }.joinToString(" ")
+                    add(TorrentResult("$title $label".trim(), "magnet:?xt=urn:btih:$hash&dn=${encoded(title)}", displayName,
+                        torrent.optLong("size_bytes").takeIf { it > 0 }, torrent.optInt("seeds").takeIf { it >= 0 },
+                        torrent.optInt("peers").takeIf { it >= 0 }, TorrentCategory.VIDEO,
+                        torrent.optLong("date_uploaded_unix").takeIf { it > 0 }?.times(1000)))
+                }
+            }
+        }
+    }
+    override suspend fun performHealthCheck() { request("https://movies-api.accel.li/api/v2/list_movies.json?limit=1") }
 }
 
 /** Prowlarr's documented API search response adapter. */
