@@ -7,6 +7,8 @@ enum class SourceKind(val label: String) {
     TORZNAB("Torznab / Jackett"),
     PROWLARR("Prowlarr API"),
     API_BAY("The Pirate Bay public API"),
+    TORRENT_CSV("TorrentCSV public API"),
+    YTS_API("YTS public API"),
 }
 
 data class SearchSourceConfig(
