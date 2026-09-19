@@ -81,6 +81,7 @@ class SettingsRepository(private val context: Context) {
         SearchSourceConfig("builtin-api-bay", "The Pirate Bay", SourceKind.API_BAY, "https://apibay.org"),
         SearchSourceConfig("builtin-torrent-csv", "TorrentCSV", SourceKind.TORRENT_CSV, "https://torrents-csv.com"),
         SearchSourceConfig("builtin-yts", "YTS", SourceKind.YTS_API, "https://movies-api.accel.li/api/v2"),
+        SearchSourceConfig("builtin-1337x", "1337xx", SourceKind.ONE_THREE_THREE_SEVEN_X, "https://www.1337xx.to"),
     )
 
     private companion object {
