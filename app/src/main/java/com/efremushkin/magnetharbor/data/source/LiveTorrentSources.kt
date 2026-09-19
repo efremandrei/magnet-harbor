@@ -192,13 +192,13 @@ private class OneThreeThreeSevenXSource(config: SearchSourceConfig) : HttpTorren
     override suspend fun performHealthCheck() { request(config.endpoint.trim().removeSuffix("/")) }
 
     private companion object {
-        val ROW = Regex("""<tr[^>]*>\\s*<td[^>]*class=["']name["'][^>]*>.*?<a[^>]+href=["']([^"']+)["'][^>]*>[^<]*</a>.*?<a[^>]+href=["'][^"']+["'][^>]*>(.*?)</a>.*?</td>.*?<td[^>]*class=["']size["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']seeds["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']leeches["'][^>]*>(.*?)</td>.*?<a[^>]+href=["']/sub/([^/"']+)""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-        val MAGNET = Regex("""href=["'](magnet:\\?[^"']+)["']""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val ROW = Regex("""<tr[^>]*>\s*<td[^>]*class=["']name["'][^>]*>.*?<a[^>]+href=["']([^"']+)["'][^>]*>[^<]*</a>.*?<a[^>]+href=["'][^"']+["'][^>]*>(.*?)</a>.*?</td>.*?<td[^>]*class=["']size["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']seeds["'][^>]*>(.*?)</td>.*?<td[^>]*class=["']leeches["'][^>]*>(.*?)</td>.*?<a[^>]+href=["']/sub/([^/"']+)""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val MAGNET = Regex("""href=["'](magnet:\?[^"']+)["']""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     }
 }
 
 private fun String.htmlText(): String = replace(Regex("<[^>]+>"), "").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-private fun parseSize(value: String): Long? = Regex("""([0-9]+(?:\\.[0-9]+)?)\\s*(KB|MB|GB|TB)""", RegexOption.IGNORE_CASE).find(value)?.let {
+private fun parseSize(value: String): Long? = Regex("""([0-9]+(?:\.[0-9]+)?)\s*(KB|MB|GB|TB)""", RegexOption.IGNORE_CASE).find(value)?.let {
     val number = it.groupValues[1].toDoubleOrNull() ?: return@let null
     val multiplier = when (it.groupValues[2].uppercase()) { "KB" -> 1L shl 10; "MB" -> 1L shl 20; "GB" -> 1L shl 30; "TB" -> 1L shl 40; else -> 1L }
     (number * multiplier).toLong()
