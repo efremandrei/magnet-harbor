@@ -9,6 +9,7 @@ enum class SourceKind(val label: String) {
     API_BAY("The Pirate Bay public API"),
     TORRENT_CSV("TorrentCSV public API"),
     YTS_API("YTS public API"),
+    ONE_THREE_THREE_SEVEN_X("1337xx HTML provider"),
 }
 
 data class SearchSourceConfig(
