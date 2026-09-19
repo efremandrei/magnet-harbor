@@ -40,7 +40,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     val sources: Flow<List<SearchSourceConfig>> = context.settingsDataStore.data.map { preferences ->
-        decodeSources(preferences[SOURCES_JSON]).ifEmpty { listOf(defaultApiBaySource()) }
+        decodeSources(preferences[SOURCES_JSON]).ifEmpty { defaultBuiltInSources() }
     }
 
     suspend fun setHideZeroSeeders(enabled: Boolean) {
@@ -77,12 +77,10 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    private fun defaultApiBaySource() = SearchSourceConfig(
-        id = "builtin-api-bay",
-        name = "The Pirate Bay",
-        kind = SourceKind.API_BAY,
-        endpoint = "https://apibay.org",
-        enabled = true,
+    private fun defaultBuiltInSources() = listOf(
+        SearchSourceConfig("builtin-api-bay", "The Pirate Bay", SourceKind.API_BAY, "https://apibay.org"),
+        SearchSourceConfig("builtin-torrent-csv", "TorrentCSV", SourceKind.TORRENT_CSV, "https://torrents-csv.com"),
+        SearchSourceConfig("builtin-yts", "YTS", SourceKind.YTS_API, "https://movies-api.accel.li/api/v2"),
     )
 
     private companion object {
