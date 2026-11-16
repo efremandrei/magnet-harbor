@@ -183,7 +183,28 @@ private fun HistoryScreen(modifier: Modifier, history: List<SearchHistoryEntity>
 }
 
 @Composable
-private fun SettingsScreen(modifier: Modifier, settings: AppSettings, onHideZeroChanged: (Boolean) -> Unit, onDarkThemeChanged: (Boolean) -> Unit) { Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { SettingSwitch("Hide results with zero seeders", settings.hideZeroSeeders, onHideZeroChanged); SettingSwitch("Dark theme", settings.darkTheme, onDarkThemeChanged); HorizontalDivider(); Text("Privacy", style = MaterialTheme.typography.titleMedium); Text("Magnet Harbor only connects to sources you configure. It does not download or stream torrent content.", style = MaterialTheme.typography.bodySmall) } }
+private fun SettingsScreen(modifier: Modifier, settings: AppSettings, onHideZeroChanged: (Boolean) -> Unit, onDarkThemeChanged: (Boolean) -> Unit) {
+    var showAbout by remember { mutableStateOf(false) }
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        SettingSwitch("Hide results with zero seeders", settings.hideZeroSeeders, onHideZeroChanged)
+        SettingSwitch("Dark theme", settings.darkTheme, onDarkThemeChanged)
+        HorizontalDivider()
+        Text("Privacy", style = MaterialTheme.typography.titleMedium)
+        Text("Magnet Harbor only connects to sources you configure. It does not download or stream torrent content.", style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = { showAbout = true }) { Text("About") }
+    }
+    if (showAbout) AlertDialog(
+        onDismissRequest = { showAbout = false },
+        title = { Text("About Magnet Harbor") },
+        text = { Column {
+            Text("Andrei Efremushkin")
+            TextButton(onClick = { uriHandler.openUri("mailto:andrei.efr@gmail.com") }) { Text("andrei.efr@gmail.com") }
+            TextButton(onClick = { uriHandler.openUri("https://github.com/efremandrei/magnet-harbor") }) { Text("Open source repository") }
+        } },
+        confirmButton = { TextButton(onClick = { showAbout = false }) { Text("Close") } },
+    )
+}
 
 @Composable
 private fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f)); Switch(checked, onCheckedChange) } }
